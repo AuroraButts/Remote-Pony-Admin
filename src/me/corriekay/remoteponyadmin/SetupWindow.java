@@ -44,6 +44,7 @@ public class SetupWindow {
 		JTextField unInput = new JTextField(prefs.getValue("username"));
 		unInput.setPreferredSize(d);
 		unInput.setName("username");
+		unInput.setToolTipText("Your exact minecraft username, case sensitive!");
 		
 		//Password
 		JTextField password = new JTextField("Password");
@@ -52,6 +53,7 @@ public class SetupWindow {
 		JTextField pwInput = new JTextField(prefs.getValue("password"));
 		pwInput.setPreferredSize(d);
 		pwInput.setName("password");
+		pwInput.setToolTipText("Your password. If you dont have a password on the server, it will not authenticate");
 		
 		//Hostname
 		JTextField hostname = new JTextField("Hostname");
@@ -60,6 +62,7 @@ public class SetupWindow {
 		JTextField hnInput = new JTextField(prefs.getValue("host"));
 		hnInput.setPreferredSize(d);
 		hnInput.setName("host");
+		hnInput.setToolTipText("The server address! Currently: minelittlepony.se");
 		
 		//Port
 		JTextField port = new JTextField("port");
@@ -68,6 +71,7 @@ public class SetupWindow {
 		JTextField portInput = new JTextField(prefs.getValue("port"));
 		portInput.setPreferredSize(d);
 		portInput.setName("port");
+		portInput.setToolTipText("The port! Currently set to 25566");
 		
 		//Notify
 		JCheckBox notify = new JCheckBox("Notfiy",prefs.getValue("notify").equals("true"));

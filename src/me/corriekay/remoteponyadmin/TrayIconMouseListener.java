@@ -9,9 +9,9 @@ public class TrayIconMouseListener implements MouseListener{
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
 		if(arg0.getClickCount()>1){
-			if(!ManeWindow.jf.isVisible()){
-				ManeWindow.jf.setVisible(true);
-				ManeWindow.jf.setState(Frame.NORMAL);
+			if(!ManeWindow.window.isVisible()){
+				ManeWindow.window.setVisible(true);
+				ManeWindow.window.setState(Frame.NORMAL);
 			}
 		}
 		

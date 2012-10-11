@@ -37,7 +37,6 @@ public class SetupWindowListener implements ActionListener {
 		frame.setEnabled(false);
 		frame.dispose();
 		Mane.start = true;
-		System.out.print("Setting to true!");
 	}
 
 }

@@ -4,6 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry kind="lib" path="C:/Users/CorrieKay/Documents/GitHub/kryonet-2.18-all.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/PonyPackets"/>
-	<classpathentry kind="lib" path="C:/Users/CorrieKay/Documents/GitHub/snakeyaml-1.11.jar"/>
+	<classpathentry kind="lib" path="C:/Users/CorrieKay/Documents/GitHub/PonyPackets.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

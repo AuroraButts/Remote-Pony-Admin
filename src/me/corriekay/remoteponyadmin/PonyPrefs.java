@@ -46,7 +46,6 @@ public class PonyPrefs {
 		return options.get(key);
 	}
 	public void setValue(String key, String value){
-		System.out.println("Setting value "+value+" to key "+key);
 		options.put(key, value);
 	}
 	public void saveConfig() throws IOException{
@@ -58,7 +57,6 @@ public class PonyPrefs {
 		while(stringit.hasNext()){
 			key = stringit.next();
 			out.write(key+": "+options.get(key));
-			System.out.println("Printing this!: "+key+": "+options.get(key));
 			if(stringit.hasNext()){
 				out.newLine();
 			}
