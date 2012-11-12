@@ -1,5 +1,7 @@
 package me.corriekay.remoteponyadmin;
 
+import javax.swing.UIManager;
+
 
 
 
@@ -8,6 +10,7 @@ public class Mane {
 	public static PonyPrefs prefs;
 	public static boolean start;
 	public static void main(String[] args) throws Exception {
+		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		Utils.init();
 		prefs = new PonyPrefs();
 		/**
@@ -23,7 +26,7 @@ public class Mane {
 			Utils.exit("There was a derp with your config! Please delete it and then reboot!");
 		}
 		if(username.equals("null")||pw.equals("null")){
-			SetupWindow.showSetupWindow();
+			SetupWindow.showSetupWindow(false);
 		} else {
 			start = true;
 		}

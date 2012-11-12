@@ -47,6 +47,13 @@ public class PonyPrefs {
 	}
 	public void setValue(String key, String value){
 		options.put(key, value);
+		try {
+			saveConfig();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			Utils.exit("Unable to save config!");
+		}
 	}
 	public void saveConfig() throws IOException{
 		config.delete();

@@ -3,6 +3,8 @@ package me.corriekay.remoteponyadmin;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.swing.JPanel;
+
 public class ChatChannel {
 
 	String name;
@@ -33,15 +35,12 @@ public class ChatChannel {
 			}
 		}
 		if(display){
-			/*JScrollBar vsb = ManeWindow.chatWindow.getVerticalScrollBar();
-			int location = vsb.getValue();
-			int height = vsb.getSize().height;
-			int totalHeight = ManeWindow.chatWindow.getSize().height-3;
-			System.out.println("Location - height - totalHeight: "+location+" - "+ height+" - "+totalHeight);
-			if(location < (totalHeight - height)){
-				System.out.println("Not at the bottom of the scroll window!");
-			}*/
 			ManeWindow.chatText.setText(message);
+			JPanel chatWindow = ManeWindow.chatTab;
+			JPanel activeWindow = (JPanel) ManeWindow.tabs.getSelectedComponent();
+			if(!chatWindow.equals(activeWindow)){
+				ManeWindow.tabs.setTitleAt(0,"!Chat");
+			}
 		}
 	}
 }

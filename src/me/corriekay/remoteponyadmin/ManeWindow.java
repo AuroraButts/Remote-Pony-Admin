@@ -9,10 +9,13 @@ import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.TrayIcon;
+import java.awt.TrayIcon.MessageType;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -22,9 +25,12 @@ import java.util.HashSet;
 
 import javax.imageio.ImageIO;
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JMenu;
@@ -36,11 +42,15 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.border.LineBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.text.DefaultCaret;
 
 import me.corriekay.packets.client.ClientChatPacket;
-import me.corriekay.packets.client.OPonyResponsePacket;
+import me.corriekay.packets.client.PlayerInfoPacket;
 
 public abstract class ManeWindow {
 	
@@ -56,25 +66,39 @@ public abstract class ManeWindow {
 	//tab, and tabs
 	public static JTabbedPane tabs;
 	public static JPanel chatTab;
-	public static JPanel playerTab;
+	public static JPanel alertTab;
 	
 	//menu bar
 	public static JMenuBar menubar;
 	public static JMenu file;
+	public static JMenuItem fileDisconnect;
+	public static JMenuItem fileReconnect;
 	public static JMenuItem fileExit;
+	public static JMenu edit;
+	public static JMenuItem editUsername;
+	public static JMenuItem editPassword;
+	public static JMenuItem editHost;
+	public static JMenuItem editPort;
+	public static JMenu player;
+	public static JMenuItem playerLookup;
 	public static JMenu channel;
 	public static JMenu allChannels;
 	public static ArrayList<JCheckBox> selectedAllChannels = new ArrayList<JCheckBox>();
 	public static JMenu allChannel;
 	public static ButtonGroup allChannelButtonGroup;
 	public static HashSet<JRadioButton> allChannelSelector = new HashSet<JRadioButton>();
+	public static JCheckBoxMenuItem chatAutoscroll;
+	public static JMenu help;
+	public static JMenuItem helpAbout;
 	
 	//chatTab components
 	public static JTextArea chatText;
+	public static DefaultCaret chatTextCaret;
 	public static JScrollPane chatWindow;
 	
 	public static JPanel sidePanel;
 	public static JList playerList;
+	public static DefaultListModel playerListModel;
 	public static JScrollPane plScrollPane;
 	public static JComboBox channelSelector;
 	
@@ -84,8 +108,19 @@ public abstract class ManeWindow {
 	//playerTab components
 	public static JTextArea placeholder;
 	
+	//alertTab components
+	public static JScrollPane alertScrollpane;
+	public static JPanel alertScrollPanel;
+	public static HashMap<Integer,JComponent> alerts = new HashMap<Integer,JComponent>();
+	
 	//has the window been created already?
-	static boolean created = false;
+	public static boolean created = false;
+	
+	//Has the chat channels list been populated yet?
+	public static boolean channelsPopulated = false;
+	
+	//preserve the data, for reconnects?
+	public static boolean preserveData = false;
 	
 	public static void createWindow() throws Exception{
 		if(created){
@@ -99,7 +134,7 @@ public abstract class ManeWindow {
 		DisplayMode monitor = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()[0].getDisplayMode();
 		window.setLocation(monitor.getWidth()/2-(window.getWidth()/2),monitor.getHeight()/2-(window.getHeight()/2));
 		window.setTitle("Remote Pony Admin");
-		File img = new File(System.getProperty("user.dir"),"icon.png");
+		File img = new File(System.getProperty("user.dir")+File.separator+"res","icon.png");
 		Image i = ImageIO.read(img);
 		window.setIconImage(i);
 		
@@ -118,33 +153,18 @@ public abstract class ManeWindow {
 		});
 		
 		//Initialize and set tasktray icon properties
-		File tasktrayimg = new File(System.getProperty("user.dir"),"taskicon.png");
+		File tasktrayimg = new File(System.getProperty("user.dir")+File.separator+"res","taskicon.png");
 		trayIcon = new TrayIcon(ImageIO.read(tasktrayimg));
 		trayIcon.setToolTip("Remote Pony Admin");
 		trayIcon.addMouseListener(new TrayIconMouseListener());//restore on doubleclick
-		trayIcon.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				String response = arg0.getActionCommand();
-				if(response == null){
-					return;
-				} else {
-					trayIcon.setActionCommand(null);
-				}
-				OPonyResponsePacket oprp = new OPonyResponsePacket();
-				oprp.name = response;
-				PonyClient.c.sendTCP(oprp);
-				return;
-			}
-		});
+		
 		//Build popup menu
 		tiMenu = new PopupMenu();
 		tiExit = new MenuItem("exit");
 		tiExit.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				int askExit;
-				askExit = JOptionPane.showConfirmDialog(null,"Are you sure you wish to close Remote Pony Admin?","Dont make Derpy sad :c", JOptionPane.YES_NO_OPTION);
+				int askExit = JOptionPane.showConfirmDialog(null, "Are you sure you wish to close Remote Pony Admin?", "Don't make derpy sad :c", JOptionPane.YES_NO_OPTION, MessageType.INFO.ordinal(), Utils.quitIcon);
 				if(askExit == 0){
 					System.exit(0);
 				}
@@ -161,32 +181,134 @@ public abstract class ManeWindow {
 		//Build Window
 		tabs = new JTabbedPane();
 		chatTab = new JPanel();
-		playerTab = new JPanel();
+		chatTab.setName("Chat");
+		alertTab = new JPanel();
+		alertTab.setName("Alerts");
 		tabs.add("Chat",chatTab);
-		tabs.add("Players",playerTab);
+		tabs.add("Alerts",alertTab);
+		tabs.addChangeListener(new ChangeListener(){
+			@Override
+			public void stateChanged(ChangeEvent arg0) {
+				int index = tabs.getSelectedIndex();
+				tabs.setTitleAt(index, tabs.getComponent(index).getName());
+			}});
 		
 		//Build Menu, add to frame
 		menubar = new JMenuBar();
 		file = new JMenu("File");
+		fileDisconnect= new JMenuItem("disconnect");
+		fileDisconnect.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				PonyClient.disconnect();
+			}});
+		fileReconnect = new JMenuItem("reconnect");
+		fileReconnect.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				PonyClient.reconnect();
+			}});
+		
 		fileExit = new JMenuItem("exit");
 		fileExit.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				int askExit;
-				askExit = JOptionPane.showConfirmDialog(null,"Are you sure you wish to close Remote Pony Admin?","Dont make Derpy sad :c", JOptionPane.YES_NO_OPTION);
+				askExit = JOptionPane.showConfirmDialog(null,"Are you sure you wish to close Remote Pony Admin?","Dont make Derpy sad :c", JOptionPane.YES_NO_OPTION, MessageType.INFO.ordinal(),Utils.quitIcon);
 				if(askExit == 0){
 					System.exit(0);
 				}
 			}
 		});
+		file.add(fileDisconnect);
+		file.add(fileReconnect);
+		file.addSeparator();
 		file.add(fileExit);
+		edit = new JMenu("Edit");
+		editUsername = new JMenuItem("Set Username");
+		editPassword = new JMenuItem("Set Password");
+		editHost = new JMenuItem("Set Host");
+		editPort = new JMenuItem("Set Port");
+		edit.add(editUsername);
+		edit.add(editPassword);
+		edit.addSeparator();
+		edit.add(editHost);
+		edit.add(editPort);
+		editUsername.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Mane.prefs.setValue("username", ManeWindow.changeSetting("Username"));
+				if(Utils.displayConfirmDialog("Please restart your client!","To utilize your new setting...")){
+					System.exit(0);
+				}
+			}});
+		editPassword.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Mane.prefs.setValue("password", ManeWindow.changeSetting("Password"));
+				if(Utils.displayConfirmDialog("Please restart your client!","To utilize your new setting...")){
+					System.exit(0);
+				}
+			}});
+		editHost.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Mane.prefs.setValue("host", ManeWindow.changeSetting("Host"));
+				if(Utils.displayConfirmDialog("Please restart your client!","To utilize your new setting...")){
+					System.exit(0);
+				}
+			}});
+		editPort.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Mane.prefs.setValue("port", ManeWindow.changeSetting("Port"));
+				if(Utils.displayConfirmDialog("Please restart your client!","To utilize your new setting...")){
+					System.exit(0);
+				}
+			}});
+		player = new JMenu("Player");
+		playerLookup = new JMenuItem("Player Lookup");
+		playerLookup.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				String req = requestString("Which pony are you looking for information on?");
+				if(req != null){
+					playerLookup(req);
+				}
+			}});
+		player.add(playerLookup);
 		channel = new JMenu("Channel");
 		allChannels = new JMenu("allchat channel filter");
 		allChannel = new JMenu("allchat selected channel");
+		chatAutoscroll = new JCheckBoxMenuItem("chat box autoscroll");
+		chatAutoscroll.setSelected(true);
+		chatAutoscroll.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				if(chatAutoscroll.isSelected()){
+					chatTextCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+				} else {
+					chatTextCaret.setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
+				}
+			}
+		});
 		channel.add(allChannel);
 		channel.add(allChannels);
+		channel.addSeparator();
+		channel.add(chatAutoscroll);
+		help = new JMenu("Help");
+		helpAbout = new JMenuItem("About RPA");
+		helpAbout.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Utils.displayDialog("Created by Corrie Kay\n\nWith help from:\nErika Springer\nAndrew McWatters\nBrandon Beecroft","About RPA");
+			}});
+		help.add(helpAbout);
 		menubar.add(file);
+		menubar.add(edit);
+		menubar.add(player);
 		menubar.add(channel);
+		menubar.add(help);
 		window.setJMenuBar(menubar);
 		
 		/**
@@ -197,6 +319,8 @@ public abstract class ManeWindow {
 		chatText.setEditable(false);
 		chatText.setWrapStyleWord(true);
 		chatText.setLineWrap(true);
+		chatTextCaret = (DefaultCaret) chatText.getCaret();
+		chatTextCaret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 		chatWindow = new JScrollPane(chatText);
 		chatWindow.getVerticalScrollBar().setAutoscrolls(true);
 		chatWindow.setPreferredSize(new Dimension(600,400));
@@ -205,7 +329,24 @@ public abstract class ManeWindow {
 		
 		//Players in channel
 		playerList = new JList();
-		playerList.setListData(new String[]{});
+		playerList.addMouseListener(new MouseListener(){
+			@Override
+			public void mouseClicked(MouseEvent arg0) {
+				JList list = (JList)arg0.getSource();
+				if(arg0.getClickCount() == 2){
+					int index = list.getSelectedIndex();
+					String player = list.getModel().getElementAt(index).toString();
+					playerLookup(player);
+				}
+			}
+			@Override public void mouseEntered(MouseEvent arg0) {}
+			@Override public void mouseExited(MouseEvent arg0) {}
+			@Override public void mousePressed(MouseEvent arg0) {}
+			@Override public void mouseReleased(MouseEvent arg0) {}
+		});
+		playerList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		playerListModel = new DefaultListModel();
+		playerList.setModel(playerListModel);
 		plScrollPane = new JScrollPane(playerList);
 		plScrollPane.setPreferredSize(new Dimension(150,350));
 		
@@ -248,6 +389,7 @@ public abstract class ManeWindow {
 								}
 							}
 							if(button == null){
+								System.out.println("Null!");
 								return;
 							}
 							ccp.channel = button.getName();
@@ -323,13 +465,16 @@ public abstract class ManeWindow {
 		chatTab.add(send);
 		
 		/**
-		 * Player tab
+		 * Alert tab
 		 */
-		//placeholder
-		placeholder = new JTextArea();
-		placeholder.setText("Placeholder");
-		placeholder.setEditable(false);
-		playerTab.add(placeholder);
+		alertScrollPanel = new JPanel();
+		alertScrollPanel.setPreferredSize(new Dimension(776,510));
+		alertScrollpane = new JScrollPane(alertScrollPanel);
+		alertScrollpane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		alertScrollpane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		alertScrollpane.getVerticalScrollBar().setUnitIncrement(alertScrollpane.getVerticalScrollBar().getUnitIncrement()*15);
+		alertScrollpane.setPreferredSize(new Dimension(792,520));
+		alertTab.add(alertScrollpane);
 		
 		/**
 		 * Finalization
@@ -339,14 +484,37 @@ public abstract class ManeWindow {
 		window.pack();
 		window.setSize(800,600);
 		created = true;
+		
 	}
 	public static void setVisible(boolean arg){
 		window.setVisible(arg);
 	}
 	public static void updatePlayerList(HashMap<String,String> ponies){
-		playerList.setListData(ponies.keySet().toArray());
+		final boolean iconed = (window.getState() == JFrame.ICONIFIED);
+		playerListModel.clear();
+		playerListModel.setSize(ponies.size());
+		Object[] ponyArray = ponies.keySet().toArray();
+		for(int i = 0; i<ponies.size(); i++){
+			playerListModel.set(i, ponyArray[i]);
+		}
+		Thread t = new Thread("iconification thread"){
+			@Override
+			public void run(){
+				try {
+					Thread.sleep(3);
+				} catch (InterruptedException e) {
+					return;
+				}
+				if(iconed){
+					window.setState(JFrame.ICONIFIED);
+					window.setVisible(false);
+				}
+			}
+		};
+		t.start();
 	}
 	public static void updateChannelList(String[] channames){
+		channelsPopulated = true;
 		ChatChannel[] chans = new ChatChannel[channames.length+2];
 		int i = 0;
 		allChannelButtonGroup = new ButtonGroup();
@@ -371,10 +539,10 @@ public abstract class ManeWindow {
 		for(JCheckBox box : selectedAllChannels){
 			allChannels.add(box);
 		}
-		chans[i] = new ChatChannel("allchat");
-		i++;
+		chans[i++] = new ChatChannel("allchat");
 		chans[i] = new ChatChannel("ponyspy");
 		channelSelector.setModel(new JComboBox(chans).getModel());
+		channelSelector.setSelectedIndex(--i);
 		((ChatChannel)channelSelector.getSelectedItem()).updateMessages(true);
 		channelSelector.addActionListener(new ActionListener(){
 			@Override
@@ -411,5 +579,16 @@ public abstract class ManeWindow {
 	}
 	public static ChatChannel getSelectedChannel(){
 		return (ChatChannel)channelSelector.getItemAt(channelSelector.getSelectedIndex());
+	}
+	public static String changeSetting(String setting){
+		return JOptionPane.showInputDialog(null, "Set your "+setting);
+	}
+	public static String requestString(String query){
+		return JOptionPane.showInputDialog(null, query);
+	}
+	public static void playerLookup(String playername){
+		PlayerInfoPacket pip = new PlayerInfoPacket();
+		pip.player = playername;
+		PonyClient.sendPacket(pip);
 	}
 }

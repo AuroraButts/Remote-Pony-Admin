@@ -16,7 +16,7 @@ import javax.swing.JTextField;
 
 public class SetupWindow {
 
-	public static void showSetupWindow() throws Exception{
+	public static void showSetupWindow(boolean exitAfter) throws Exception{
 		
 		//setup frame
 		JFrame setupFrame = new JFrame();
@@ -25,7 +25,7 @@ public class SetupWindow {
 		setupFrame.setLocation(monitor.getWidth()/2-(setupFrame.getWidth()/2),monitor.getHeight()/2-(setupFrame.getHeight()/2));
 		setupFrame.setTitle("Setup RPA");
 		setupFrame.setResizable(false);
-		File img = new File(System.getProperty("user.dir"),"icon.png");
+		File img = new File(System.getProperty("user.dir")+File.separator+"res","icon.png");
 		setupFrame.setIconImage(ImageIO.read(img));
 		setupFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
@@ -80,7 +80,7 @@ public class SetupWindow {
 		//Ok button
 		JButton ok = new JButton("okay!");
 		ok.setPreferredSize(new Dimension(100,50));
-		ok.addActionListener(new SetupWindowListener(setupFrame,unInput,pwInput,hnInput,portInput,notify));
+		ok.addActionListener(new SetupWindowListener(exitAfter,setupFrame,unInput,pwInput,hnInput,portInput,notify));
 		
 		//Add to the frame
 		panel.add(username);

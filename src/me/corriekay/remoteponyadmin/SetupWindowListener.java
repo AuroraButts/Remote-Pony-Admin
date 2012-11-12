@@ -13,9 +13,11 @@ public class SetupWindowListener implements ActionListener {
 	
 	Component[] components;
 	JFrame frame;
-	public SetupWindowListener(JFrame frame, Component... components){
+	boolean exitAfter;
+	public SetupWindowListener(boolean exitAfter,JFrame frame, Component... components){
 		this.components = components;
 		this.frame = frame;
+		this.exitAfter = exitAfter;
 	}
 
 	@Override
@@ -36,7 +38,9 @@ public class SetupWindowListener implements ActionListener {
 		frame.setVisible(false);
 		frame.setEnabled(false);
 		frame.dispose();
-		Mane.start = true;
+		if(exitAfter){
+			Utils.exit("Settings saved!");
+		} else Mane.start = true;
 	}
 
 }
