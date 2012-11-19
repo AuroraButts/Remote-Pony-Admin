@@ -78,6 +78,7 @@ public class PonyPrefs {
 			if(stuff.length != 2){
 				JOptionPane.showMessageDialog(null,"Preference malformation: \""+line+"\"");
 				System.exit(1);
+				in.close();
 				return;
 			} else{
 				String key = stuff[0];

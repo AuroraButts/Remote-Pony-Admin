@@ -52,6 +52,7 @@ import javax.swing.text.DefaultCaret;
 import me.corriekay.packets.client.ClientChatPacket;
 import me.corriekay.packets.client.PlayerInfoPacket;
 
+@SuppressWarnings("rawtypes")
 public abstract class ManeWindow {
 	
 	//window vars
@@ -122,6 +123,7 @@ public abstract class ManeWindow {
 	//preserve the data, for reconnects?
 	public static boolean preserveData = false;
 	
+	@SuppressWarnings("unchecked")
 	public static void createWindow() throws Exception{
 		if(created){
 			System.out.println("WINDOW ALREADY CREATED.");
@@ -489,6 +491,7 @@ public abstract class ManeWindow {
 	public static void setVisible(boolean arg){
 		window.setVisible(arg);
 	}
+	@SuppressWarnings("unchecked")
 	public static void updatePlayerList(HashMap<String,String> ponies){
 		final boolean iconed = (window.getState() == JFrame.ICONIFIED);
 		playerListModel.clear();
@@ -513,6 +516,7 @@ public abstract class ManeWindow {
 		};
 		t.start();
 	}
+	@SuppressWarnings("unchecked")
 	public static void updateChannelList(String[] channames){
 		channelsPopulated = true;
 		ChatChannel[] chans = new ChatChannel[channames.length+2];
