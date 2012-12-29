@@ -6,44 +6,47 @@ import me.corriekay.packets.PoniPacket;
 
 import com.esotericsoftware.kryonet.Client;
 
-public abstract class PonyClient {
+public abstract class PonyClient{
 
 	public static Client c;
 	public static ManeWindow mw;
 	public static RPAListener rpaListener;
 
 	public static void initClient(){
-		c = new Client();
+		c = new Client(100000000, 100000000);
 		PacketUtils.registerClientPackets(c);
 		c.start();
 		rpaListener = new RPAListener();
 		c.addListener(rpaListener);
 	}
+
 	public static void startClient(){
 		reconnect();
 	}
+
 	public static void sendPacket(PoniPacket p){
 		c.sendTCP(p);
 	}
+
 	public static boolean reconnect(){
-		if(c.isConnected()){
+		if(c.isConnected()) {
 			Utils.displayDialog("You're still connected to the server!");
 			return false;
 		}
-		Thread t = new Thread("ReconnectTryThread"){
+		Thread t = new Thread("ReconnectTryThread") {
 			@Override
 			public void run(){
 				try {
 					Thread.sleep(3);
-				} catch (InterruptedException e1) {
+				} catch(InterruptedException e1) {
 					System.exit(0);
 				}
 				int maxTries = 5;
-				for(int tries = 0; tries<maxTries; tries++){
-					try{
+				for(int tries = 0; tries < maxTries; tries++) {
+					try {
 						c.connect(5000, prefs.getValue("host"), Integer.parseInt(prefs.getValue("port")));
 						return;
-					} catch (Exception e){
+					} catch(Exception e) {
 						continue;
 					}
 				}
@@ -53,6 +56,7 @@ public abstract class PonyClient {
 		t.start();
 		return true;
 	}
+
 	public static void disconnect(){
 		rpaListener.isConnected = false;
 		c.close();

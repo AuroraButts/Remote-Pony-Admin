@@ -42,17 +42,22 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.border.LineBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.text.DefaultCaret;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeSelectionModel;
 
+import me.corriekay.packets.PoniFile;
+import me.corriekay.packets.PoniFolder;
 import me.corriekay.packets.client.ClientChatPacket;
+import me.corriekay.packets.client.FileRequestPacket;
 import me.corriekay.packets.client.PlayerInfoPacket;
 
-@SuppressWarnings("rawtypes")
 public abstract class ManeWindow {
 	
 	//window vars
@@ -68,6 +73,7 @@ public abstract class ManeWindow {
 	public static JTabbedPane tabs;
 	public static JPanel chatTab;
 	public static JPanel alertTab;
+	public static JPanel fileTab;
 	
 	//menu bar
 	public static JMenuBar menubar;
@@ -106,13 +112,15 @@ public abstract class ManeWindow {
 	public static JTextArea textBox;
 	public static JButton send;
 	
-	//playerTab components
-	public static JTextArea placeholder;
-	
 	//alertTab components
 	public static JScrollPane alertScrollpane;
 	public static JPanel alertScrollPanel;
 	public static HashMap<Integer,JComponent> alerts = new HashMap<Integer,JComponent>();
+	
+	//fileTab components
+	public static JScrollPane fileScrollPane;
+	public static JTree fileTree;
+	public static DefaultMutableTreeNode fileTreeRootNode;
 	
 	//has the window been created already?
 	public static boolean created = false;
@@ -122,8 +130,7 @@ public abstract class ManeWindow {
 	
 	//preserve the data, for reconnects?
 	public static boolean preserveData = false;
-	
-	@SuppressWarnings("unchecked")
+
 	public static void createWindow() throws Exception{
 		if(created){
 			System.out.println("WINDOW ALREADY CREATED.");
@@ -186,8 +193,11 @@ public abstract class ManeWindow {
 		chatTab.setName("Chat");
 		alertTab = new JPanel();
 		alertTab.setName("Alerts");
+		fileTab = new JPanel();
+		fileTab.setName("Files");
 		tabs.add("Chat",chatTab);
 		tabs.add("Alerts",alertTab);
+		tabs.add("Files", fileTab);
 		tabs.addChangeListener(new ChangeListener(){
 			@Override
 			public void stateChanged(ChangeEvent arg0) {
@@ -303,7 +313,7 @@ public abstract class ManeWindow {
 		helpAbout.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				Utils.displayDialog("Created by Corrie Kay\n\nWith help from:\nErika Springer\nAndrew McWatters\nBrandon Beecroft","About RPA");
+				Utils.displayDialog("Created by Corrie Kay\n\nWith help from:\nErika Springer\nAndrew McWatters\nBrandon Beecroft\nVersion: "+Mane.version,"About RPA");
 			}});
 		help.add(helpAbout);
 		menubar.add(file);
@@ -479,6 +489,46 @@ public abstract class ManeWindow {
 		alertTab.add(alertScrollpane);
 		
 		/**
+		 * File Tab
+		 */
+		PoniFolder pppopp3 = new PoniFolder();
+		pppopp3.name = "PPPoPP3";
+		fileTreeRootNode = new DefaultMutableTreeNode(pppopp3);
+		fileTree = new JTree(fileTreeRootNode);
+		fileTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+		fileTree.addMouseListener(new MouseListener(){
+
+			@Override
+			public void mouseClicked(MouseEvent arg0) {
+				if(arg0.getClickCount()>1&&fileTree.getSelectionCount()>0){
+					DefaultMutableTreeNode dmtn = (DefaultMutableTreeNode)fileTree.getSelectionPath().getLastPathComponent();
+					if(dmtn.getUserObject() instanceof PoniFile){
+						PoniFile file = (PoniFile)dmtn.getUserObject();
+						DefaultMutableTreeNode parentNode = ((DefaultMutableTreeNode)dmtn.getParent());
+						System.out.println(parentNode.getUserObject().toString());
+						PoniFolder folder = (PoniFolder)((DefaultMutableTreeNode)dmtn.getParent()).getUserObject();
+						//System.out.println("valid file! Directory: "+folder.directory+". File name: "+file.name); TODO DEBUG
+						FileRequestPacket frp = new FileRequestPacket();
+						frp.fileDirectory = folder.directory;
+						frp.fileName = file.name;
+						frp.clientDirectory = folder.directory.substring(folder.directory.indexOf("PPPoPP3"),folder.directory.length());
+						PonyClient.sendPacket(frp);
+						return;
+					}
+				}
+				
+			}
+			public void mouseEntered(MouseEvent arg0){}
+			public void mouseExited(MouseEvent arg0){}
+			public void mousePressed(MouseEvent arg0){}
+			public void mouseReleased(MouseEvent arg0){}
+			
+		});
+		fileScrollPane = new JScrollPane(fileTree);
+		fileScrollPane.setPreferredSize(new Dimension(776,510));
+		fileTab.add(fileScrollPane);
+		
+		/**
 		 * Finalization
 		 */
 		window.add(tabs);
@@ -486,12 +536,10 @@ public abstract class ManeWindow {
 		window.pack();
 		window.setSize(800,600);
 		created = true;
-		
 	}
 	public static void setVisible(boolean arg){
 		window.setVisible(arg);
 	}
-	@SuppressWarnings("unchecked")
 	public static void updatePlayerList(HashMap<String,String> ponies){
 		final boolean iconed = (window.getState() == JFrame.ICONIFIED);
 		playerListModel.clear();
@@ -516,7 +564,25 @@ public abstract class ManeWindow {
 		};
 		t.start();
 	}
-	@SuppressWarnings("unchecked")
+	public static void updateFolderList(PoniFolder folder){
+		fileTreeRootNode.removeAllChildren();
+		((PoniFolder)fileTreeRootNode.getUserObject()).directory = folder.directory;
+		fillNode(fileTreeRootNode, folder);
+	}
+	private static void fillNode(DefaultMutableTreeNode node, PoniFolder folder){
+		for(PoniFile file : folder.files){
+			DefaultMutableTreeNode dmtn = new DefaultMutableTreeNode(file);
+			dmtn.setAllowsChildren(false);
+			dmtn.setUserObject(file);
+			node.add(dmtn);
+		}
+		for(PoniFolder subFolder : folder.subfolders){
+			DefaultMutableTreeNode dmtn = new DefaultMutableTreeNode(subFolder);
+			dmtn.setUserObject(subFolder);
+			node.add(dmtn);
+			fillNode(dmtn,subFolder);
+		}
+	}
 	public static void updateChannelList(String[] channames){
 		channelsPopulated = true;
 		ChatChannel[] chans = new ChatChannel[channames.length+2];

@@ -12,6 +12,8 @@ import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
 import java.security.KeyFactory;
@@ -41,6 +43,8 @@ import me.corriekay.packets.server.AssassinateClient;
 import me.corriekay.packets.server.BroadcastMessage;
 import me.corriekay.packets.server.ChanNamesPacket;
 import me.corriekay.packets.server.ChatPacket;
+import me.corriekay.packets.server.DirectoryResponsePacket;
+import me.corriekay.packets.server.FilePacket;
 import me.corriekay.packets.server.OPonyAlertPacket;
 import me.corriekay.packets.server.PlayerInfoResponsePacket;
 import me.corriekay.packets.server.PonyList;
@@ -229,6 +233,26 @@ public class RPAListener extends Listener{
 				BroadcastMessage bm = (BroadcastMessage)p;
 				for(ChatChannel channel : ManeWindow.getChans()){
 					channel.addMessage(bm.message);
+				}
+			}
+			if(p instanceof DirectoryResponsePacket){
+				DirectoryResponsePacket drp = (DirectoryResponsePacket)p;
+				ManeWindow.updateFolderList(drp.folder);
+			}
+			if(p instanceof FilePacket){
+				FilePacket fp = (FilePacket)p;
+				File dir = new File(System.getProperty("user.dir")+File.separator+fp.directory);
+				if(!dir.isDirectory()){
+					dir.mkdirs();
+				}
+				File file = new File(dir,fp.name);
+				try {
+					file.createNewFile();
+					FileOutputStream stream = new FileOutputStream(file);
+					stream.write(fp.bytes);
+					stream.close();
+				} catch (IOException e) {
+					Utils.exit("Error! File unable to write! Please make sure you have write access!");
 				}
 			}
 		}

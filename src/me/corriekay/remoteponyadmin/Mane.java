@@ -9,6 +9,7 @@ public class Mane {
 	
 	public static PonyPrefs prefs;
 	public static boolean start;
+	public static final String version = "v2.0";
 	public static void main(String[] args) throws Exception {
 		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		Utils.init();
